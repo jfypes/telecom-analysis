@@ -11,7 +11,7 @@ Construir un perfil estadístico de los clientes para identificar patrones de co
 | Archivo | Filas | Contenido |
 |---|---|---|
 | `plans.csv` | 2 | Planes actuales: nombre, mensajes incluidos, GB por mes, minutos incluidos, pago mensual en USD y costo por GB, mensaje y minuto extra. |
-| `users_latam.csv` | 4,000 | Clientes: `user_id`, nombre, `age`, `city`, `reg_date`, `plan` y `churn_date`. |
+| `users_latam.csv` | 4,000 | Clientes: `user_id`, `first_name`, `last_name`, `age`, `city`, `reg_date`, `plan` y `churn_date`. |
 | `usage.csv` | 40,000 | Registros de uso: `id`, `user_id`, `type` (`call` o `text`), `date`, `duration` (llamadas) y `length` (mensajes). |
 
 ## Etapas del análisis
@@ -26,22 +26,24 @@ Construir un perfil estadístico de los clientes para identificar patrones de co
    - `age`: el centinela `-999` se reemplaza por la mediana.
    - `city`: el centinela `"?"` se convierte en nulo.
    - `reg_date`: las fechas de 2026 se marcan como nulas (`NaT`).
+   - `date` en `usage.csv`: los 50 nulos (0.125%) se dejan como nulos (`NaT`) por su bajo porcentaje.
    - `duration` y `length`: se verifica que sus nulos dependen de `type` (`duration` solo existe en llamadas y `length` solo en mensajes), por lo que se dejan como nulos.
    - `churn_date`: los nulos corresponden a clientes activos, por lo que se conservan.
-4. **Perfil de uso por usuario:** agregación de `usage` por `user_id` (`cant_mensajes`, `cant_llamadas`, `cant_minutos_llamada`) y unión con `users` en el DataFrame `user_profile`. Resumen estadístico y distribución de planes (65% Básico, 35% Premium).
+4. **Perfil de uso por usuario:** agregación de `usage` por `user_id` (`cant_mensajes`, `cant_llamadas`, `cant_minutos_llamada`) y unión con `users` en el DataFrame `user_profile`. Los usuarios sin registros de uso (uno) se completan con 0 en las tres métricas tras la unión, por lo que `user_profile` queda con los 4,000 usuarios. Resumen estadístico y distribución de planes (65% Básico, 35% Premium).
 5. **Distribuciones y outliers:** histogramas por plan y boxplots de `age`, `cant_mensajes`, `cant_llamadas` y `cant_minutos_llamada`. Cálculo de límites con el método IQR para las tres variables de uso.
 6. **Segmentación:**
    - `grupo_uso`: Bajo uso (llamadas < 5 y mensajes < 5), Uso medio (llamadas < 10 y mensajes < 10) y Alto uso (resto).
-   - `grupo_edad`: Joven (< 30), Adulto (< 60) y Adulto mayor (resto).
+   - Tamaño de los segmentos de uso: Uso medio 2,943 usuarios (73.58%), Bajo uso 779 (19.48%) y Alto uso 278 (6.95%).
+   - `grupo_edad`: Joven (< 30), Adulto (< 60) y Adulto Mayor (resto).
    - Comparación del uso promedio y de la tasa de churn en cada segmento.
 7. **Insight ejecutivo:** hallazgos, limitaciones y recomendaciones para la oferta de planes.
 
 ## Hallazgos principales
 
 - El churn observado es de ~11.65% (466 de 4,000 clientes tienen `churn_date`).
-- Los segmentos de uso se separan claramente en consumo, pero el churn no baja con el uso: **Alto uso** tiene la tasa más alta (13.98%), frente a 11.48% en Uso medio y 11.44% en Bajo uso.
-- La actividad promedio es casi idéntica entre grupos de edad. El grupo **Adulto** es el más numeroso (~50% de la base) y el de mayor churn (12.49%), frente a 10.97% en Adulto mayor y 10.53% en Joven.
-- Los outliers aparecen solo en el extremo superior de las tres variables de uso. Se interpretan como variabilidad real del comportamiento y se conservan.
+- Los segmentos de uso se separan claramente en consumo, pero el churn no baja con el uso: **Alto uso** tiene la tasa más alta (14.03%), frente a 11.48% en Uso medio y 11.42% en Bajo uso.
+- La actividad promedio es casi idéntica entre grupos de edad. El grupo **Adulto** es el más numeroso (~50% de la base) y el de mayor churn (12.49%), frente a 10.97% en Adulto Mayor y 10.53% en Joven.
+- Los outliers aparecen solo en el extremo superior de las tres variables de uso: 46 usuarios en mensajes (1.15%), 30 en llamadas (0.75%) y 109 en minutos de llamada (2.73%). Se interpretan como variabilidad real del comportamiento y se conservan.
 
 ## Limitaciones
 
@@ -51,7 +53,7 @@ El análisis es descriptivo. No se evaluó la significancia estadística de las 
 
 El notebook (`Proyecto 6 - Análisis de una empresa de telecomunicaciones.ipynb`) lee los datos desde la ruta `/datasets/`, que existe en el entorno de TripleTen. Fuera de ese entorno hay que ajustar las rutas de carga.
 
-### Opción 1: Google Colab
+### Google Colab
 
 1. Abre [Google Colab](https://colab.research.google.com) y elige **Archivo > Subir cuaderno** (o **Archivo > Abrir cuaderno > GitHub** y pega la URL del repositorio).
 2. Sube `plans.csv`, `users_latam.csv` y `usage.csv` desde el panel de archivos de la izquierda.
@@ -65,7 +67,6 @@ El notebook (`Proyecto 6 - Análisis de una empresa de telecomunicaciones.ipynb`
 
 4. Ejecuta todo con **Entorno de ejecución > Ejecutar todo**.
 
-
 ## Guía de reproducción
 
 1. Verifica que los tres CSV estén disponibles y que las rutas de la celda de carga coincidan con su ubicación.
@@ -75,7 +76,8 @@ El notebook (`Proyecto 6 - Análisis de una empresa de telecomunicaciones.ipynb`
    - `users`: 4,000 filas y 88.35% de nulos en `churn_date`.
    - `usage`: 40,000 filas y 50 nulos en `date`.
    - Distribución de planes: 64.875% Básico y 35.125% Premium.
-   - Churn por grupo de uso: 13.98% (Alto), 11.48% (Medio) y 11.44% (Bajo).
+   - Tamaño de los segmentos de uso: 2,943 (Uso medio), 779 (Bajo uso) y 278 (Alto uso).
+   - Churn por grupo de uso: 14.03% (Alto), 11.48% (Medio) y 11.42% (Bajo).
 5. Si algo no coincide, revisa que los CSV sean los originales y que no se hayan modificado antes de la carga.
 
 ## Tecnologías
